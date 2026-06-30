@@ -1,22 +1,21 @@
+
 import streamlit as st
 import pandas as pd
 import pickle
-from prophet import Prophet
 
 st.set_page_config(page_title="AI Finance Advisor", layout="centered")
 st.title("💰 AI Finance Advisor")
 
-with open("prophet_model.pkl", "rb") as f:
-    model = pickle.load(f)
+with open("forecast_model.pkl", "rb") as f:
+    ts_model = pickle.load(f)
 
 cluster_profiles = pd.read_csv("cluster_profiles.csv", index_col=0)
 
 st.header("📈 Expense Forecast (Next 30 Days)")
-future = model.make_future_dataframe(periods=30)
-forecast = model.predict(future)
-forecast_display = forecast[["ds", "yhat"]].tail(30)
-forecast_display.columns = ["Date", "Predicted Spend"]
-st.line_chart(forecast_display.set_index("Date"))
+forecast = ts_model.forecast(30)
+forecast_df = pd.DataFrame({"Predicted Spend": forecast})
+forecast_df.index = forecast_df.index.to_timestamp()
+st.line_chart(forecast_df)
 
 st.header("💡 Personalized Suggestions")
 overall_avg = cluster_profiles.mean()
