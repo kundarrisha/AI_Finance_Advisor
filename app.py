@@ -15,14 +15,33 @@ salary = st.number_input("Monthly Salary (₹)", min_value=0, value=50000, step=
 total_expenses = 0
 df = None
 
+# Typical spending as % of salary, learned from our dataset's category averages
+typical_pct = {
+    "Rent": 0.30, "Groceries": 0.10, "Dining": 0.05, "Transport": 0.04,
+    "Utilities": 0.04, "Entertainment": 0.03, "Shopping": 0.06, "Healthcare": 0.03
+}
+
 if input_method == "Manual entry":
-    st.write("Enter your monthly expenses by category:")
+    st.write("**Rent** — enter your exact amount. For other categories, type your own number, or check 'Let AI estimate' to auto-fill a typical value based on your salary.")
+
     categories = ["Rent", "Groceries", "Dining", "Transport", "Utilities", "Entertainment", "Shopping", "Healthcare"]
     expense_inputs = {}
+
+    # Rent is always manual
+    expense_inputs["Rent"] = st.number_input("Rent", min_value=0, value=0, step=500, key="Rent")
+
+    st.write("**Variable expenses:**")
     cols = st.columns(2)
-    for i, cat in enumerate(categories):
+    for i, cat in enumerate(categories[1:]):
         with cols[i % 2]:
-            expense_inputs[cat] = st.number_input(cat, min_value=0, value=0, step=500, key=cat)
+            ai_estimate = st.checkbox(f"Let AI estimate {cat}", key=f"ai_{cat}")
+            if ai_estimate:
+                estimated_value = round(salary * typical_pct[cat])
+                st.write(f"AI estimate: ₹{estimated_value:,}")
+                expense_inputs[cat] = estimated_value
+            else:
+                expense_inputs[cat] = st.number_input(cat, min_value=0, value=0, step=500, key=cat)
+
     total_expenses = sum(expense_inputs.values())
 
 else:
@@ -41,7 +60,7 @@ if total_expenses > 0:
     st.metric("Monthly Salary", f"₹{salary:,.0f}")
     st.metric("Monthly Expenses", f"₹{total_expenses:,.0f}")
     st.metric("Monthly Surplus (Investable)", f"₹{surplus:,.0f}")
-
+    
 # ---------- SECTION 2: Forecast (uses uploaded CSV if available) ----------
 if df is not None:
     st.header("📈 Expense Forecast (Next 30 Days)")
