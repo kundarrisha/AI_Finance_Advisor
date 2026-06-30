@@ -105,19 +105,28 @@ if surplus > 0:
 elif total_expenses > 0:
     st.warning("Your expenses exceed your salary — no surplus available to invest. Consider reviewing your spending first.")
 
-# ---------- SECTION 4: Spending Pattern Suggestions ----------
-try:
-    cluster_profiles = pd.read_csv("cluster_profiles.csv", index_col=0)
-    st.header("💡 Spending Pattern Suggestions")
-    overall_avg = cluster_profiles.mean()
-    for cluster_id in cluster_profiles.index:
-        profile = cluster_profiles.loc[cluster_id]
-        flagged = [cat for cat in profile.index if profile[cat] > overall_avg[cat] * 1.15]
-        st.subheader(f"Spending Pattern {cluster_id}")
-        if flagged:
-            for cat in flagged:
-                st.write(f"- Your **{cat}** spending tends to run high — consider setting a monthly cap.")
-        else:
-            st.write("- Spending looks balanced across categories.")
-except FileNotFoundError:
-    pass
+# ---------- SECTION 4: Spending Health Check ----------
+if total_expenses > 0:
+    st.header("💡 Spending Health Check")
+    st.caption("Comparing your spending to typical healthy percentages of income.")
+
+    if input_method == "Manual entry":
+        user_expenses = expense_inputs
+    else:
+        # Break down uploaded CSV into per-category monthly averages
+        cat_monthly = df.groupby([df["date"].dt.to_period("M"), "category"])["amount"].sum().reset_index()
+        user_expenses = cat_monthly.groupby("category")["amount"].mean().round(2).to_dict()
+
+    flagged_any = False
+    for cat, amount in user_expenses.items():
+        if cat not in typical_pct or salary == 0:
+            continue
+        pct_of_salary = amount / salary
+        typical = typical_pct[cat]
+        if pct_of_salary > typical * 1.2:
+            flagged_any = True
+            st.write(f"- Your **{cat}** spending is **{pct_of_salary*100:.1f}%** of your salary, "
+                      f"higher than the typical **{typical*100:.0f}%** — consider setting a monthly cap.")
+
+    if not flagged_any:
+        st.write("Your spending looks balanced relative to typical healthy percentages.")
